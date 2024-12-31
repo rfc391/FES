@@ -16,7 +16,10 @@ async function fetchThreatPredictions(): Promise<ThreatPrediction[]> {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch threat predictions: ${response.statusText}`);
+    if (response.status >= 500) {
+      throw new Error(`${response.status}: ${response.statusText}`);
+    }
+    throw new Error(`${response.status}: ${await response.text()}`);
   }
 
   return response.json();
@@ -27,6 +30,7 @@ export function useThreatPrediction() {
     queryKey: ['/api/threats/predictions'],
     queryFn: fetchThreatPredictions,
     refetchInterval: 30000, // Refresh every 30 seconds
+    retry: false
   });
 }
 

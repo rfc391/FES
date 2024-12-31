@@ -1,5 +1,4 @@
 import { pgTable, text, serial, integer, boolean, timestamp, json, real } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 // Basic user schema with authentication fields
@@ -41,7 +40,7 @@ export const threatIntelligence = pgTable("threat_intelligence", {
   relatedThreats: json("related_threats"),
   confidenceScore: real("confidence_score").default(0.7),
   verifiedBy: json("verified_by"),
-  references: json("references"),
+  refLinks: json("ref_links"),
 });
 
 // Schema validation
