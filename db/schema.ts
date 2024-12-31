@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, json, real } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 export const users = pgTable("users", {
@@ -132,7 +133,42 @@ export const socialLikes = pgTable("social_likes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users);
+// Define table relations
+export const usersRelations = relations(users, ({ many }) => ({
+  posts: many(socialPosts),
+  comments: many(socialComments),
+  likes: many(socialLikes),
+  following: many(socialConnections, { relationName: "following" }),
+  followers: many(socialConnections, { relationName: "followers" }),
+}));
+
+export const socialPostsRelations = relations(socialPosts, ({ one, many }) => ({
+  user: one(users, { fields: [socialPosts.userId], references: [users.id] }),
+  comments: many(socialComments),
+  likes: many(socialLikes),
+}));
+
+export const socialCommentsRelations = relations(socialComments, ({ one }) => ({
+  user: one(users, { fields: [socialComments.userId], references: [users.id] }),
+  post: one(socialPosts, { fields: [socialComments.postId], references: [socialPosts.id] }),
+}));
+
+export const socialLikesRelations = relations(socialLikes, ({ one }) => ({
+  user: one(users, { fields: [socialLikes.userId], references: [users.id] }),
+  post: one(socialPosts, { fields: [socialLikes.postId], references: [socialPosts.id] }),
+}));
+
+export const socialConnectionsRelations = relations(socialConnections, ({ one }) => ({
+  follower: one(users, { fields: [socialConnections.followerId], references: [users.id] }),
+  following: one(users, { fields: [socialConnections.followingId], references: [users.id] }),
+}));
+
+// Schema validation with updated createInsertSchema and createSelectSchema usage
+export const insertUserSchema = createInsertSchema(users, {
+  password: (schema) => schema.password,
+  username: (schema) => schema.username,
+});
+
 export const selectUserSchema = createSelectSchema(users);
 export const insertThreatSchema = createInsertSchema(threats);
 export const selectThreatSchema = createSelectSchema(threats);
@@ -157,6 +193,7 @@ export const selectSocialConnectionSchema = createSelectSchema(socialConnections
 export const insertSocialLikeSchema = createInsertSchema(socialLikes);
 export const selectSocialLikeSchema = createSelectSchema(socialLikes);
 
+// Types
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
 export type InsertThreat = typeof threats.$inferInsert;
