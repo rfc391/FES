@@ -1,6 +1,7 @@
 
 { pkgs }: {
   deps = [
+    pkgs.libyaml
     pkgs.postgresql
     pkgs.geckodriver
     pkgs.xsimd
