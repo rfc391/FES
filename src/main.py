@@ -11,6 +11,8 @@ from flask import Flask, jsonify, request
 from .utils import setup_logging, analyze_fluctuations, validate_signal
 from .config import load_config
 from .readme_generator import update_project_readme
+from .automation.test_runner import TestRunner
+from .automation.code_quality import analyze_code_quality
 import os
 
 app = Flask(__name__)
@@ -18,7 +20,7 @@ config = load_config()
 
 def initialize_platform() -> Dict[str, Any]:
     """
-    Initialize the FES platform with necessary configurations
+    Initialize the FES platform with necessary configurations and run automations
     """
     setup_logging()
     config = load_config()
@@ -30,6 +32,21 @@ def initialize_platform() -> Dict[str, Any]:
     except Exception as e:
         logging.error("Failed to update README: %s", str(e))
 
+    # Run initial code quality analysis
+    try:
+        analyze_code_quality()
+        logging.info("Code quality analysis completed successfully")
+    except Exception as e:
+        logging.error("Failed to run code analysis: %s", str(e))
+
+    # Run test suite
+    try:
+        runner = TestRunner(os.getcwd())
+        results = runner.run_tests()
+        logging.info(f"Test suite completed with {results['success_rate']*100}% success rate")
+    except Exception as e:
+        logging.error("Failed to run tests: %s", str(e))
+
     logging.info("FES Platform initialized successfully")
     return config
 
@@ -37,12 +54,6 @@ def initialize_platform() -> Dict[str, Any]:
 def process_signal() -> Dict[str, Any]:
     """
     Process incoming signals using fluctuation-enhanced techniques
-
-    Args:
-        signal_data: Raw signal data from sensors
-
-    Returns:
-        Processed signal data with detected anomalies
     """
     try:
         signal_data = request.get_json()
@@ -78,6 +89,33 @@ def get_metrics() -> Dict[str, Any]:
         return jsonify(metrics)
     except Exception as e:
         logging.error("Failed to gather metrics: %s", str(e))
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/automation/run-tests', methods=['POST'])
+def run_tests() -> Dict[str, Any]:
+    """
+    Manually trigger test suite
+    """
+    try:
+        runner = TestRunner(os.getcwd())
+        results = runner.run_tests()
+        return jsonify(results)
+    except Exception as e:
+        logging.error("Failed to run tests: %s", str(e))
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/automation/analyze-code', methods=['POST'])
+def analyze_code() -> Dict[str, Any]:
+    """
+    Manually trigger code quality analysis
+    """
+    try:
+        results = analyze_code_quality()
+        if results:
+            return jsonify(results)
+        return jsonify({"error": "Code analysis failed"}), 500
+    except Exception as e:
+        logging.error("Failed to analyze code: %s", str(e))
         return jsonify({"error": str(e)}), 500
 
 def main():
