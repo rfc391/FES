@@ -32,7 +32,12 @@ class ThreatPredictor {
   }
 
   private startPythonService() {
-    this.pythonProcess = spawn('python', ['src/ml_integration.py']);
+    const env = {
+      ...process.env,
+      'TF_CPP_MIN_LOG_LEVEL': '2',
+      'CUDA_VISIBLE_DEVICES': '-1'
+    };
+    this.pythonProcess = spawn('python', ['src/ml_integration.py'], { env });
     
     this.pythonProcess.stdout.on('data', (data: Buffer) => {
       console.log(`ML Service: ${data}`);
