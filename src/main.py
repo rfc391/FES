@@ -14,9 +14,11 @@ from config import load_config
 from readme_generator import update_project_readme
 from automation.test_runner import TestRunner
 from automation.code_quality import analyze_code_quality
+from automation.workflow_viz import WorkflowTracker
 
 app = Flask(__name__)
 config = load_config()
+workflow_tracker = WorkflowTracker(os.getcwd())
 
 def initialize_platform() -> Dict[str, Any]:
     """
@@ -28,23 +30,39 @@ def initialize_platform() -> Dict[str, Any]:
     # Update README with latest metrics
     try:
         update_project_readme()
+        workflow_tracker.update_workflow("readme_update", "success", {
+            "timestamp": datetime.now().isoformat()
+        })
         logging.info("README.md updated successfully with latest metrics")
     except Exception as e:
+        workflow_tracker.update_workflow("readme_update", "failure", {
+            "error": str(e)
+        })
         logging.error("Failed to update README: %s", str(e))
 
     # Run initial code quality analysis
     try:
         analyze_code_quality()
+        workflow_tracker.update_workflow("code_quality", "success", {
+            "timestamp": datetime.now().isoformat()
+        })
         logging.info("Code quality analysis completed successfully")
     except Exception as e:
+        workflow_tracker.update_workflow("code_quality", "failure", {
+            "error": str(e)
+        })
         logging.error("Failed to run code analysis: %s", str(e))
 
     # Run test suite
     try:
         runner = TestRunner(os.getcwd())
         results = runner.run_tests()
+        workflow_tracker.update_workflow("tests", "success", results)
         logging.info(f"Test suite completed with {results['success_rate']*100}% success rate")
     except Exception as e:
+        workflow_tracker.update_workflow("tests", "failure", {
+            "error": str(e)
+        })
         logging.error("Failed to run tests: %s", str(e))
 
     logging.info("FES Platform initialized successfully")
@@ -116,6 +134,17 @@ def analyze_code() -> Dict[str, Any]:
         return jsonify({"error": "Code analysis failed"}), 500
     except Exception as e:
         logging.error("Failed to analyze code: %s", str(e))
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/workflow-status', methods=['GET'])
+def get_workflow_status() -> Dict[str, Any]:
+    """
+    Get current workflow status for visualization
+    """
+    try:
+        return jsonify(workflow_tracker.generate_visualization_data())
+    except Exception as e:
+        logging.error("Failed to get workflow status: %s", str(e))
         return jsonify({"error": str(e)}), 500
 
 def main():
