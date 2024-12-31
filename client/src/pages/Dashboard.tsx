@@ -8,6 +8,7 @@ import { useThreats } from "@/hooks/use-threats";
 import { useUser } from "@/hooks/use-user";
 import { AlertCircle, LogOut, Shield, Activity, Search, Filter } from "lucide-react";
 import * as d3 from "d3";
+import { scaleLinear } from "d3";
 
 export default function Dashboard() {
   const { threats } = useThreats();
@@ -19,7 +20,7 @@ export default function Dashboard() {
   useEffect(() => {
     const filtered = threats.filter(threat => {
       const matchesSearch = threat.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          threat.location.toLowerCase().includes(searchTerm.toLowerCase());
+                            threat.location.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesSeverity = severityFilter === "all" || threat.severity === severityFilter;
       return matchesSearch && matchesSeverity;
     });
@@ -33,6 +34,7 @@ export default function Dashboard() {
   function renderThreatMap(threatData: any[]) {
     const width = 800;
     const height = 400;
+    const cellSize = 20; // Size of each heatmap cell
 
     d3.select("#threat-map").selectAll("*").remove();
 
@@ -41,11 +43,50 @@ export default function Dashboard() {
       .attr("width", width)
       .attr("height", height);
 
-    // Enhanced dark mode visualization
+    // Background
     svg.append("rect")
       .attr("width", width)
       .attr("height", height)
       .attr("fill", "hsl(var(--background))");
+
+    // Create grid for heatmap
+    const gridData = [];
+    for (let x = 0; x < width; x += cellSize) {
+      for (let y = 0; y < height; y += cellSize) {
+        gridData.push({ x, y, count: 0 });
+      }
+    }
+
+    // Count threats in each cell
+    threatData.forEach(threat => {
+      const x = Math.floor((threat.longitude + 180) * (width / 360) / cellSize) * cellSize;
+      const y = Math.floor((90 - threat.latitude) * (height / 180) / cellSize) * cellSize;
+      const cell = gridData.find(cell => cell.x === x && cell.y === y);
+      if (cell) {
+        cell.count++;
+      }
+    });
+
+    // Color scale for heatmap
+    const maxCount = Math.max(...gridData.map(d => d.count));
+    const colorScale = scaleLinear<string>()
+      .domain([0, maxCount])
+      .range(["hsl(var(--background))", "hsl(var(--destructive))"]);
+
+    // Draw heatmap cells with animation
+    svg.selectAll("rect.heatmap-cell")
+      .data(gridData)
+      .join("rect")
+      .attr("class", "heatmap-cell")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("width", cellSize)
+      .attr("height", cellSize)
+      .attr("fill", d => colorScale(d.count))
+      .attr("opacity", 0)
+      .transition()
+      .duration(1000)
+      .attr("opacity", d => d.count ? 0.6 : 0);
 
     // Add grid lines with animation
     const gridColor = "hsl(var(--muted-foreground) / 0.2)";
@@ -76,7 +117,7 @@ export default function Dashboard() {
         .style("opacity", 1);
     }
 
-    // Plot threat points with enhanced animations
+    // Plot individual threat points with enhanced animations
     threatData.forEach((threat, index) => {
       const radius = threat.severity === "high" ? 6 : 4;
       const delay = index * 100;
@@ -87,7 +128,7 @@ export default function Dashboard() {
         .attr("cy", (90 - threat.latitude) * (height / 180))
         .attr("r", radius + 2)
         .attr("fill", "none")
-        .attr("stroke", threat.severity === "high" ? 
+        .attr("stroke", threat.severity === "high" ?
           "hsl(var(--destructive))" : "hsl(var(--warning))")
         .attr("stroke-opacity", 0.3)
         .attr("filter", "blur(3px)")
@@ -98,7 +139,7 @@ export default function Dashboard() {
         .attr("cx", (threat.longitude + 180) * (width / 360))
         .attr("cy", (90 - threat.latitude) * (height / 180))
         .attr("r", 0)
-        .attr("fill", threat.severity === "high" ? 
+        .attr("fill", threat.severity === "high" ?
           "hsl(var(--destructive))" : "hsl(var(--warning))")
         .attr("opacity", 0.9);
 
@@ -134,6 +175,47 @@ export default function Dashboard() {
           });
       }
     });
+
+    // Add legend
+    const legendWidth = 200;
+    const legendHeight = 20;
+    const legend = svg.append("g")
+      .attr("transform", `translate(${width - legendWidth - 20}, ${height - 40})`);
+
+    const legendScale = scaleLinear()
+      .domain([0, maxCount])
+      .range([0, legendWidth]);
+
+    const legendAxis = d3.axisBottom(legendScale)
+      .ticks(5)
+      .tickSize(legendHeight);
+
+    legend.append("g")
+      .call(legendAxis)
+      .select(".domain")
+      .remove();
+
+    const legendGradient = legend.append("defs")
+      .append("linearGradient")
+      .attr("id", "legend-gradient")
+      .attr("x1", "0%")
+      .attr("x2", "100%")
+      .attr("y1", "0%")
+      .attr("y2", "0%");
+
+    legendGradient.append("stop")
+      .attr("offset", "0%")
+      .attr("stop-color", "hsl(var(--background))");
+
+    legendGradient.append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", "hsl(var(--destructive))");
+
+    legend.append("rect")
+      .attr("width", legendWidth)
+      .attr("height", legendHeight)
+      .style("fill", "url(#legend-gradient)")
+      .style("opacity", 0.6);
   }
 
   return (
@@ -211,8 +293,8 @@ export default function Dashboard() {
                     className="flex items-start gap-2 p-3 border-b border-border/50 last:border-0 hover:bg-muted/50 transition-colors"
                   >
                     <AlertCircle className={
-                      threat.severity === "high" 
-                        ? "text-destructive animate-pulse" 
+                      threat.severity === "high"
+                        ? "text-destructive animate-pulse"
                         : "text-warning"
                     } />
                     <div>
