@@ -10,6 +10,8 @@ from datetime import datetime
 from flask import Flask, jsonify, request
 from .utils import setup_logging, analyze_fluctuations, validate_signal
 from .config import load_config
+from .readme_generator import update_project_readme
+import os
 
 app = Flask(__name__)
 config = load_config()
@@ -20,6 +22,14 @@ def initialize_platform() -> Dict[str, Any]:
     """
     setup_logging()
     config = load_config()
+
+    # Update README with latest metrics
+    try:
+        update_project_readme()
+        logging.info("README.md updated successfully with latest metrics")
+    except Exception as e:
+        logging.error("Failed to update README: %s", str(e))
+
     logging.info("FES Platform initialized successfully")
     return config
 
@@ -54,6 +64,20 @@ def process_signal() -> Dict[str, Any]:
 
     except Exception as e:
         logging.error("Failed to process signal: %s", str(e))
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/metrics', methods=['GET'])
+def get_metrics() -> Dict[str, Any]:
+    """
+    Get current project metrics
+    """
+    try:
+        from .readme_generator import ReadmeGenerator
+        generator = ReadmeGenerator(os.getcwd())
+        metrics = generator.gather_project_metrics()
+        return jsonify(metrics)
+    except Exception as e:
+        logging.error("Failed to gather metrics: %s", str(e))
         return jsonify({"error": str(e)}), 500
 
 def main():
