@@ -16,12 +16,12 @@ export const riskProfiles = pgTable("risk_profiles", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   overallScore: real("overall_score").default(0).notNull(),
-  categories: json("categories").notNull(), // Stores scores for different security categories
+  categories: json("categories").notNull(),
   lastUpdated: timestamp("last_updated").defaultNow().notNull(),
-  recommendations: json("recommendations"), // Stores personalized security recommendations
-  historicalScores: json("historical_scores"), // Tracks score changes over time
-  vulnerabilities: json("vulnerabilities"), // Identified security vulnerabilities
-  strengths: json("strengths"), // Identified security strengths
+  recommendations: json("recommendations"),
+  historicalScores: json("historical_scores"),
+  vulnerabilities: json("vulnerabilities"),
+  strengths: json("strengths"),
   nextAssessmentDate: timestamp("next_assessment_date"),
 });
 
@@ -54,13 +54,16 @@ export const threatIntelligence = pgTable("threat_intelligence", {
   confidenceScore: real("confidence_score").default(0.7),
   verifiedBy: json("verified_by"),
   refLinks: json("ref_links"),
+  collaborators: json("collaborators").default([]), 
+  lastContributor: integer("last_contributor").references(() => users.id), 
+  shareScope: text("share_scope").default("public"), 
+  verificationStatus: text("verification_status").default("pending"), 
+  communityScore: real("community_score").default(0), 
+  endorsements: json("endorsements").default([]), 
 });
 
 // Schema validation
-export const insertUserSchema = createInsertSchema(users, {
-  password: (schema) => schema.password,
-  username: (schema) => schema.username,
-});
+export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export const insertThreatSchema = createInsertSchema(threats);
 export const selectThreatSchema = createSelectSchema(threats);
