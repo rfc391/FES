@@ -2,23 +2,17 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="FES_Project",
+    name="project_name",
     version="0.1",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
         "numpy",
-        "scipy",
+        "pandas",
         "matplotlib",
-        "seaborn",
-        "scikit-learn",
-        "PyQt5",
-        "requests",
-        "yagmail",
-        "schedule",
         "pytest"
     ],
-    description="Fluctuation-Enhanced Sensing Project",
-    author="rfc391",
+    description="Project description",
+    author="Your Name",
     license="MIT",
 )
