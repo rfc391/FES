@@ -5,9 +5,9 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { users, insertUserSchema, type SelectUser } from "@db/schema";
+import { users, insertUserSchema, type SelectUser, loginAttempts, riskFactors } from "@db/schema";
 import { db } from "@db";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -31,6 +31,92 @@ const crypto = {
 declare global {
   namespace Express {
     interface User extends SelectUser { }
+  }
+}
+
+async function calculateRiskScore(userId: number, ipAddress: string, userAgent: string): Promise<number> {
+  const recentAttempts = await db
+    .select()
+    .from(loginAttempts)
+    .where(and(
+      eq(loginAttempts.userId, userId),
+      eq(loginAttempts.successful, false)
+    ))
+    .orderBy(desc(loginAttempts.timestamp))
+    .limit(5);
+
+  let riskScore = 0;
+
+  // Check for failed login attempts
+  if (recentAttempts.length >= 3) {
+    riskScore += 30;
+  }
+
+  // Check for login from new IP
+  const knownIPs = await db
+    .select()
+    .from(loginAttempts)
+    .where(and(
+      eq(loginAttempts.userId, userId),
+      eq(loginAttempts.successful, true)
+    ))
+    .limit(10);
+
+  const isKnownIP = knownIPs.some(attempt => attempt.ipAddress === ipAddress);
+  if (!isKnownIP) {
+    riskScore += 20;
+  }
+
+  // Check for unusual user agent
+  const isKnownUserAgent = knownIPs.some(attempt => attempt.userAgent === userAgent);
+  if (!isKnownUserAgent) {
+    riskScore += 10;
+  }
+
+  return riskScore;
+}
+
+async function recordLoginAttempt(
+  userId: number,
+  successful: boolean,
+  ipAddress: string,
+  userAgent: string,
+  score: number
+) {
+  await db.insert(loginAttempts).values({
+    userId,
+    successful,
+    ipAddress,
+    userAgent,
+    score,
+    riskFactors: {
+      newIP: !knownIPs.includes(ipAddress),
+      newUserAgent: !knownUserAgents.includes(userAgent),
+      recentFailedAttempts: recentAttempts.length
+    }
+  });
+
+  // Update user's risk score
+  await db
+    .update(users)
+    .set({ 
+      riskScore: score,
+      lastLoginAt: new Date()
+    })
+    .where(eq(users.id, userId));
+
+  // Record high-risk factors if score is high
+  if (score > 50) {
+    await db.insert(riskFactors).values({
+      userId,
+      type: 'login_risk',
+      severity: score > 70 ? 'high' : 'medium',
+      details: {
+        score,
+        ipAddress,
+        userAgent
+      }
+    });
   }
 }
 
@@ -69,10 +155,34 @@ export function setupAuth(app: Express) {
         if (!user) {
           return done(null, false, { message: "Incorrect username." });
         }
+
+        // Calculate risk score before password verification
+        const ipAddress = req.ip;
+        const userAgent = req.get('user-agent') || 'unknown';
+        const riskScore = await calculateRiskScore(user.id, ipAddress, userAgent);
+
         const isMatch = await crypto.compare(password, user.password);
+
+        // Record the login attempt
+        await recordLoginAttempt(
+          user.id,
+          isMatch,
+          ipAddress,
+          userAgent,
+          riskScore
+        );
+
         if (!isMatch) {
           return done(null, false, { message: "Incorrect password." });
         }
+
+        // Handle high-risk logins
+        if (riskScore > 70) {
+          return done(null, false, { 
+            message: "Access denied due to suspicious activity. Please contact support."
+          });
+        }
+
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -125,6 +235,8 @@ export function setupAuth(app: Express) {
         .values({
           username,
           password: hashedPassword,
+          riskScore: 0,
+          status: 'active'
         })
         .returning();
 
@@ -166,7 +278,12 @@ export function setupAuth(app: Express) {
 
         return res.json({
           message: "Login successful",
-          user: { id: user.id, username: user.username },
+          user: { 
+            id: user.id, 
+            username: user.username,
+            riskScore: user.riskScore,
+            status: user.status
+          },
         });
       });
     };
@@ -185,7 +302,13 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     if (req.isAuthenticated()) {
-      return res.json(req.user);
+      const user = req.user as Express.User;
+      return res.json({
+        id: user.id,
+        username: user.username,
+        riskScore: user.riskScore,
+        status: user.status
+      });
     }
 
     res.status(401).send("Not logged in");

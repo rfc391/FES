@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useThreats } from "@/hooks/use-threats";
 import { useUser } from "@/hooks/use-user";
-import { AlertCircle, LogOut, Shield, Activity, Search, Filter } from "lucide-react";
+import { AlertCircle, LogOut, Shield, Activity, Search, Filter, AlertTriangle } from "lucide-react";
 import * as d3 from "d3";
 import { scaleLinear } from "d3";
 
@@ -227,9 +227,22 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold">Cyber Command</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              Welcome, {user?.username}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Welcome, {user?.username}
+              </span>
+              {user?.riskScore > 50 && (
+                <div className="flex items-center gap-1 text-sm text-destructive" title="High risk score detected">
+                  <AlertTriangle className="h-4 w-4" />
+                  Risk Score: {user.riskScore}
+                </div>
+              )}
+              {user?.status !== 'active' && (
+                <div className="text-sm text-warning">
+                  Account Status: {user.status}
+                </div>
+              )}
+            </div>
             <Button variant="outline" size="sm" onClick={() => logout()}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
