@@ -8,6 +8,8 @@ interface ThreatPrediction {
   predictedSeverity: 'low' | 'medium' | 'high' | 'critical';
   indicators: string[];
   timestamp: string;
+  aiInsights?: string;
+  trendDirection?: 'increasing' | 'stable' | 'decreasing';
 }
 
 async function fetchThreatPredictions(): Promise<ThreatPrediction[]> {

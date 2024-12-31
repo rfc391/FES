@@ -9,6 +9,7 @@ import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import SecurityRecommendationsPage from "./pages/SecurityRecommendationsPage";
 import ThreatSocialPage from "./pages/ThreatSocialPage";
 import { useUser } from "./hooks/use-user";
+import { ThreatPredictionViz } from "./components/ThreatPredictionViz";
 
 function App() {
   return (
@@ -40,6 +41,12 @@ function AppContent() {
   return (
     <Switch>
       <Route path="/" component={DashboardPage} />
+      <Route path="/predictions" component={() => (
+        <div className="container mx-auto p-6">
+          <h1 className="text-2xl font-bold mb-6">Threat Predictions</h1>
+          <ThreatPredictionViz />
+        </div>
+      )} />
       <Route path="/intelligence" component={ThreatIntelligencePage} />
       <Route path="/notifications" component={NotificationSettingsPage} />
       <Route path="/security" component={SecurityRecommendationsPage} />

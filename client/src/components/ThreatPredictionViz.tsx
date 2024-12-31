@@ -1,6 +1,6 @@
 import { useThreatPrediction, type ThreatPrediction } from "@/hooks/use-threat-prediction";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, TrendingUp, TrendingDown, Minus, Brain } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -58,8 +58,94 @@ export function ThreatPredictionViz() {
     severity: pred.predictedSeverity,
   }));
 
+  const getTrendIcon = (direction?: string) => {
+    switch (direction) {
+      case 'increasing':
+        return <TrendingUp className="h-5 w-5 text-destructive" />;
+      case 'decreasing':
+        return <TrendingDown className="h-5 w-5 text-primary" />;
+      default:
+        return <Minus className="h-5 w-5 text-muted-foreground" />;
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Latest Prediction Summary */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Latest Risk Score</CardTitle>
+            {getTrendIcon(predictions[0].trendDirection)}
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{predictions[0].riskScore.toFixed(1)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Trend: {predictions[0].trendDirection || 'stable'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Probability</CardTitle>
+            <Brain className="h-5 w-5 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {(predictions[0].probability * 100).toFixed(1)}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Confidence-adjusted likelihood
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Severity Level</CardTitle>
+            <AlertCircle className={`h-5 w-5 ${
+              predictions[0].predictedSeverity === 'critical' ? 'text-destructive' :
+              predictions[0].predictedSeverity === 'high' ? 'text-orange-500' :
+              predictions[0].predictedSeverity === 'medium' ? 'text-yellow-500' :
+              'text-primary'
+            }`} />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold capitalize">
+              {predictions[0].predictedSeverity}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Predicted impact level
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* AI Insights */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle>AI Analysis Insights</CardTitle>
+          <Brain className="h-5 w-5 text-primary" />
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            {predictions[0].aiInsights || "No AI insights available at this time."}
+          </p>
+          {predictions[0].indicators?.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium mb-2">Key Indicators:</h4>
+              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                {predictions[0].indicators.map((indicator, index) => (
+                  <li key={index}>{indicator}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Risk Timeline */}
       <Card>
         <CardHeader>
           <CardTitle>Threat Risk Timeline</CardTitle>
@@ -99,9 +185,10 @@ export function ThreatPredictionViz() {
         </CardContent>
       </Card>
 
+      {/* Risk Distribution */}
       <Card>
         <CardHeader>
-          <CardTitle>Threat Distribution</CardTitle>
+          <CardTitle>Risk Distribution Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
