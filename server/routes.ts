@@ -4,7 +4,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { db } from "@db";
 import { setupAuth } from "./auth";
-import { users, threats, alerts, metrics } from "@db/schema";
+import { users, threats, alerts, metrics, securityRecommendations } from "@db/schema";
 import { eq, desc } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
@@ -42,6 +42,50 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Get security recommendations
+  app.get('/api/security/recommendations', async (req, res) => {
+    try {
+      const recommendations = await db
+        .select()
+        .from(securityRecommendations)
+        .orderBy(desc(securityRecommendations.priority));
+      res.json(recommendations);
+    } catch (error) {
+      console.error('Error fetching security recommendations:', error);
+      res.status(500).json({ error: 'Failed to fetch security recommendations' });
+    }
+  });
+
+  // Apply security recommendation
+  app.post('/api/security/recommendations/:id/apply', async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    try {
+      const [updatedRecommendation] = await db
+        .update(securityRecommendations)
+        .set({ 
+          appliedAt: new Date(),
+          appliedBy: req.user.id 
+        })
+        .where(eq(securityRecommendations.id, parseInt(req.params.id)))
+        .returning();
+
+      // Create an alert for the applied recommendation
+      await db.insert(alerts).values({
+        message: `Security recommendation "${updatedRecommendation.title}" has been applied`,
+        priority: updatedRecommendation.priority,
+        userId: req.user.id
+      });
+
+      res.json(updatedRecommendation);
+    } catch (error) {
+      console.error('Error applying security recommendation:', error);
+      res.status(500).json({ error: 'Failed to apply security recommendation' });
+    }
+  });
+
   // Get alerts for a user
   app.get('/api/alerts', async (req, res) => {
     if (!req.user) {
@@ -59,25 +103,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('Error fetching alerts:', error);
       res.status(500).json({ error: 'Failed to fetch alerts' });
-    }
-  });
-
-  // Acknowledge an alert
-  app.post('/api/alerts/:id/acknowledge', async (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    try {
-      const [updatedAlert] = await db
-        .update(alerts)
-        .set({ acknowledged: true })
-        .where(eq(alerts.id, parseInt(req.params.id)))
-        .returning();
-      res.json(updatedAlert);
-    } catch (error) {
-      console.error('Error acknowledging alert:', error);
-      res.status(500).json({ error: 'Failed to acknowledge alert' });
     }
   });
 
@@ -99,7 +124,7 @@ export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ server: httpServer, path: "/api/threats" });
 
-  // WebSocket connection handler
+  // WebSocket connection handler for real-time threat updates
   wss.on("connection", (ws) => {
     console.log("Client connected to threat feed");
 
@@ -115,49 +140,7 @@ export function registerRoutes(app: Express): Server {
       })
       .catch(console.error);
 
-    // Simulate threat data (in production, this would be real threat detection)
-    const interval = setInterval(() => {
-      const threat = {
-        type: ["Malware", "DDoS", "Data Breach", "Phishing"][Math.floor(Math.random() * 4)],
-        severity: Math.random() > 0.7 ? "high" : "medium",
-        source: ["US", "CN", "RU", "UK", "DE"][Math.floor(Math.random() * 5)],
-        targetIp: `${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`,
-        details: {
-          attackVector: ["Email", "Web", "Network", "USB"][Math.floor(Math.random() * 4)],
-          indicators: ["Suspicious traffic", "Unusual login pattern", "Data exfiltration"][Math.floor(Math.random() * 3)],
-          timestamp: new Date().toISOString()
-        }
-      };
-
-      // Store threat in database
-      db.insert(threats)
-        .values(threat)
-        .returning()
-        .then(([newThreat]) => {
-          // Broadcast to all clients
-          wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({ type: 'update', threat: newThreat }));
-            }
-          });
-
-          // Create alert if severity is high
-          if (threat.severity === 'high') {
-            db.insert(alerts)
-              .values({
-                threatId: newThreat.id,
-                message: `High severity ${threat.type} threat detected from ${threat.source}`,
-                priority: 'high'
-              })
-              .then(() => console.log('Alert created for high severity threat'))
-              .catch(console.error);
-          }
-        })
-        .catch(console.error);
-    }, 5000);
-
     ws.on("close", () => {
-      clearInterval(interval);
       console.log("Client disconnected from threat feed");
     });
   });
