@@ -2,9 +2,23 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { WebSocket, WebSocketServer } from "ws";
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Proxy /api/process-signal requests to Python backend
+  app.use('/api/process-signal', createProxyMiddleware({
+    target: 'http://localhost:5001',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/process-signal': '/api/process-signal'
+    },
+    onError: (err, req, res) => {
+      console.error('Proxy error:', err);
+      res.status(500).send('Proxy error occurred');
+    }
+  }));
 
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ server: httpServer, path: "/api/threats" });
