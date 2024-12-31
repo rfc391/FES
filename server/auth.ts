@@ -1,6 +1,6 @@
 import passport from "passport";
 import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
-import { type Express } from "express";
+import { type Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -8,6 +8,15 @@ import { promisify } from "util";
 import { users, insertUserSchema, type SelectUser } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
+
+// Initialize constants for rate limiting and security
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
+
+// Rate limiting maps - defined at module level
+const knownIPs: Map<string, { attempts: number; lastAttempt: number }> = new Map();
+const knownUserAgents: Set<string> = new Set();
+const recentAttempts: Map<string, number> = new Map();
 
 const scryptAsync = promisify(scrypt);
 const crypto = {
@@ -30,7 +39,7 @@ const crypto = {
 
 declare global {
   namespace Express {
-    interface User extends SelectUser { }
+    interface User extends SelectUser {}
   }
 }
 
@@ -40,7 +49,12 @@ export function setupAuth(app: Express) {
     secret: process.env.REPL_ID || "cyber-warfare-platform",
     resave: false,
     saveUninitialized: false,
-    cookie: {},
+    cookie: {
+      secure: app.get("env") === "production",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      sameSite: "strict"
+    },
     store: new MemoryStore({
       checkPeriod: 86400000,
     }),
@@ -48,14 +62,35 @@ export function setupAuth(app: Express) {
 
   if (app.get("env") === "production") {
     app.set("trust proxy", 1);
-    sessionSettings.cookie = {
-      secure: true,
-    };
   }
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Rate limiting middleware
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip;
+    const userAgent = req.get("user-agent") || "";
+
+    // Check for suspicious patterns
+    if (!knownUserAgents.has(userAgent)) {
+      knownUserAgents.add(userAgent);
+    }
+
+    const ipInfo = knownIPs.get(ip) || { attempts: 0, lastAttempt: Date.now() };
+
+    if (ipInfo.attempts >= MAX_LOGIN_ATTEMPTS) {
+      const timeSinceLastAttempt = Date.now() - ipInfo.lastAttempt;
+      if (timeSinceLastAttempt < LOCKOUT_TIME) {
+        return res.status(429).send("Too many login attempts. Please try again later.");
+      }
+      ipInfo.attempts = 0;
+    }
+
+    knownIPs.set(ip, { ...ipInfo, lastAttempt: Date.now() });
+    next();
+  });
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -71,8 +106,27 @@ export function setupAuth(app: Express) {
         }
         const isMatch = await crypto.compare(password, user.password);
         if (!isMatch) {
+          // Update failed attempts
+          await db
+            .update(users)
+            .set({ 
+              failedAttempts: user.failedAttempts + 1,
+              lastLogin: user.failedAttempts >= MAX_LOGIN_ATTEMPTS ? null : user.lastLogin
+            })
+            .where(eq(users.id, user.id));
+
           return done(null, false, { message: "Incorrect password." });
         }
+
+        // Reset failed attempts on successful login
+        await db
+          .update(users)
+          .set({ 
+            failedAttempts: 0,
+            lastLogin: new Date()
+          })
+          .where(eq(users.id, user.id));
+
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -97,7 +151,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
+  app.post("/api/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = insertUserSchema.safeParse(req.body);
       if (!result.success) {
@@ -125,6 +179,9 @@ export function setupAuth(app: Express) {
         .values({
           username,
           password: hashedPassword,
+          riskScore: 0,
+          failedAttempts: 0,
+          lastLogin: new Date()
         })
         .returning();
 
@@ -142,7 +199,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", (req: Request, res: Response, next: NextFunction) => {
     const result = insertUserSchema.safeParse(req.body);
     if (!result.success) {
       return res
@@ -150,7 +207,7 @@ export function setupAuth(app: Express) {
         .send("Invalid input: " + result.error.issues.map(i => i.message).join(", "));
     }
 
-    const cb = (err: any, user: Express.User, info: IVerifyOptions) => {
+    const cb = (err: any, user: Express.User | false, info: IVerifyOptions) => {
       if (err) {
         return next(err);
       }
@@ -173,7 +230,7 @@ export function setupAuth(app: Express) {
     passport.authenticate("local", cb)(req, res, next);
   });
 
-  app.post("/api/logout", (req, res) => {
+  app.post("/api/logout", (req: Request, res: Response) => {
     req.logout((err) => {
       if (err) {
         return res.status(500).send("Logout failed");
@@ -183,7 +240,7 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", (req: Request, res: Response) => {
     if (req.isAuthenticated()) {
       return res.json(req.user);
     }
