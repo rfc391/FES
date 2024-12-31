@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from sklearn.ensemble import IsolationForest
 import pywt
 import logging
-from .security_validator import SecurityValidator
+from src.utils.security_validator import SecurityValidator
 
 @dataclass
 class CyberThreatIndicator:
