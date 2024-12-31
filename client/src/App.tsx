@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 import ThreatIntelligencePage from "./pages/ThreatIntelligencePage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import SecurityRecommendationsPage from "./pages/SecurityRecommendationsPage";
+import ThreatSocialPage from "./pages/ThreatSocialPage";
 import { useUser } from "./hooks/use-user";
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
       <Route path="/intelligence" component={ThreatIntelligencePage} />
       <Route path="/notifications" component={NotificationSettingsPage} />
       <Route path="/security" component={SecurityRecommendationsPage} />
+      <Route path="/social" component={ThreatSocialPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -77,7 +77,7 @@ export const notificationPreferences = pgTable("notification_preferences", {
   emailAddress: text("email_address"),
   webhookUrl: text("webhook_url"),
   minimumSeverity: text("minimum_severity").default("medium"),
-  digestFrequency: text("digest_frequency").default("realtime"), 
+  digestFrequency: text("digest_frequency").default("realtime"),
   quietHoursStart: integer("quiet_hours_start"),
   quietHoursEnd: integer("quiet_hours_end"),
   customFilters: json("custom_filters"),
@@ -86,7 +86,7 @@ export const notificationPreferences = pgTable("notification_preferences", {
 
 export const securityRecommendations = pgTable("security_recommendations", {
   id: serial("id").primaryKey(),
-  category: text("category").notNull(), 
+  category: text("category").notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
   impact: text("impact").notNull(),
@@ -99,6 +99,37 @@ export const securityRecommendations = pgTable("security_recommendations", {
   isApplicable: boolean("is_applicable").default(true),
   autoApply: boolean("auto_apply").default(false),
   verificationSteps: json("verification_steps"),
+});
+
+export const socialPosts = pgTable("social_posts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  likes: integer("likes").default(0),
+  tags: json("tags").$type<string[]>().default([]),
+});
+
+export const socialComments = pgTable("social_comments", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => socialPosts.id),
+  userId: integer("user_id").references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const socialConnections = pgTable("social_connections", {
+  id: serial("id").primaryKey(),
+  followerId: integer("follower_id").references(() => users.id),
+  followingId: integer("following_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const socialLikes = pgTable("social_likes", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => socialPosts.id),
+  userId: integer("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users);
@@ -117,6 +148,14 @@ export const insertNotificationPreferencesSchema = createInsertSchema(notificati
 export const selectNotificationPreferencesSchema = createSelectSchema(notificationPreferences);
 export const insertSecurityRecommendationSchema = createInsertSchema(securityRecommendations);
 export const selectSecurityRecommendationSchema = createSelectSchema(securityRecommendations);
+export const insertSocialPostSchema = createInsertSchema(socialPosts);
+export const selectSocialPostSchema = createSelectSchema(socialPosts);
+export const insertSocialCommentSchema = createInsertSchema(socialComments);
+export const selectSocialCommentSchema = createSelectSchema(socialComments);
+export const insertSocialConnectionSchema = createInsertSchema(socialConnections);
+export const selectSocialConnectionSchema = createSelectSchema(socialConnections);
+export const insertSocialLikeSchema = createInsertSchema(socialLikes);
+export const selectSocialLikeSchema = createSelectSchema(socialLikes);
 
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
@@ -134,3 +173,11 @@ export type InsertNotificationPreferences = typeof notificationPreferences.$infe
 export type SelectNotificationPreferences = typeof notificationPreferences.$inferSelect;
 export type InsertSecurityRecommendation = typeof securityRecommendations.$inferInsert;
 export type SelectSecurityRecommendation = typeof securityRecommendations.$inferSelect;
+export type InsertSocialPost = typeof socialPosts.$inferInsert;
+export type SelectSocialPost = typeof socialPosts.$inferSelect;
+export type InsertSocialComment = typeof socialComments.$inferInsert;
+export type SelectSocialComment = typeof socialComments.$inferSelect;
+export type InsertSocialConnection = typeof socialConnections.$inferInsert;
+export type SelectSocialConnection = typeof socialConnections.$inferSelect;
+export type InsertSocialLike = typeof socialLikes.$inferInsert;
+export type SelectSocialLike = typeof socialLikes.$inferSelect;
