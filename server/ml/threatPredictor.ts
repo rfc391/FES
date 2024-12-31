@@ -1,9 +1,8 @@
+
 import { threats, type SelectThreat } from "@db/schema";
 import { db } from "@db";
 import { eq } from "drizzle-orm";
 import OpenAI from "openai";
-
-const openai = new OpenAI();
 
 interface PredictionResult {
   threatId: number;
@@ -16,14 +15,21 @@ interface PredictionResult {
   trendDirection?: 'increasing' | 'stable' | 'decreasing';
 }
 
+type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
+type TrendDirection = 'increasing' | 'stable' | 'decreasing';
+
 class ThreatPredictor {
   private static instance: ThreatPredictor;
   private predictionCache: Map<number, PredictionResult>;
   private lastUpdateTime: number;
-
+  private openai: OpenAI;
+  
   private constructor() {
     this.predictionCache = new Map();
     this.lastUpdateTime = 0;
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
   }
 
   public static getInstance(): ThreatPredictor {
@@ -34,11 +40,12 @@ class ThreatPredictor {
   }
 
   public async getPredictions(): Promise<PredictionResult[]> {
-    const currentTime = Date.now();
-    // Update predictions every 30 seconds
-    if (currentTime - this.lastUpdateTime > 30000) {
+    const CACHE_TTL = 30000; // 30 seconds
+    const shouldUpdate = Date.now() - this.lastUpdateTime > CACHE_TTL;
+    
+    if (shouldUpdate) {
       await this.updatePredictions();
-      this.lastUpdateTime = currentTime;
+      this.lastUpdateTime = Date.now();
     }
 
     return Array.from(this.predictionCache.values());
@@ -46,12 +53,11 @@ class ThreatPredictor {
 
   private async updatePredictions(): Promise<void> {
     try {
-      // Fetch recent threats from the database
-      const recentThreats = await db.select().from(threats)
+      const recentThreats = await db.select()
+        .from(threats)
         .orderBy(threats.timestamp)
         .limit(100);
 
-      // Process each threat through ML model and OpenAI
       for (const threat of recentThreats) {
         const prediction = await this.predictThreat(threat);
         this.predictionCache.set(threat.id, prediction);
@@ -61,20 +67,47 @@ class ThreatPredictor {
     }
   }
 
+  private calculateRiskScore(threat: SelectThreat): number {
+    const severityScores = {
+      critical: 100,
+      high: 75,
+      medium: 50,
+      low: 25
+    };
+    
+    let score = severityScores[threat.severity] || 25;
+    score *= (threat.confidence || 0.5);
+    
+    if (threat.indicators) {
+      score += Object.keys(threat.indicators).length * 5;
+    }
+    
+    return Math.min(100, Math.max(0, score));
+  }
+
+  private getSeverityLevel(riskScore: number): SeverityLevel {
+    if (riskScore >= 80) return 'critical';
+    if (riskScore >= 60) return 'high';
+    if (riskScore >= 40) return 'medium';
+    return 'low';
+  }
+
+  private calculateProbability(threat: SelectThreat): number {
+    const severityMultipliers = {
+      critical: 0.9,
+      high: 0.7,
+      medium: 0.5,
+      low: 0.3
+    };
+    
+    return (threat.confidence || 0.5) * severityMultipliers[threat.severity];
+  }
+
   private async predictThreat(threat: SelectThreat): Promise<PredictionResult> {
-    // Calculate risk score based on various factors
     const riskScore = this.calculateRiskScore(threat);
-
-    // Determine severity based on risk score
     const severity = this.getSeverityLevel(riskScore);
-
-    // Calculate probability based on historical patterns
     const probability = this.calculateProbability(threat);
-
-    // Get AI-powered insights
     const aiInsights = await this.getAIInsights(threat);
-
-    // Determine trend direction
     const trendDirection = await this.analyzeTrendDirection(threat);
 
     return {
@@ -89,14 +122,21 @@ class ThreatPredictor {
     };
   }
 
+  private extractIndicators(threat: SelectThreat): string[] {
+    if (!threat.indicators) return [];
+    
+    return Object.entries(threat.indicators as Record<string, any>)
+      .map(([key, value]) => `${key}: ${value}`);
+  }
+
   private async getAIInsights(threat: SelectThreat): Promise<string> {
     try {
-      const response = await openai.chat.completions.create({
+      const response = await this.openai.chat.completions.create({
         model: "gpt-4",
         messages: [
           {
             role: "system",
-            content: "You are a cybersecurity threat analyst. Analyze the given threat data and provide concise insights about its potential impact and evolution."
+            content: "You are a cybersecurity threat analyst. Analyze the given threat data and provide concise insights."
           },
           {
             role: "user",
@@ -120,20 +160,16 @@ class ThreatPredictor {
     }
   }
 
-  private async analyzeTrendDirection(threat: SelectThreat): Promise<'increasing' | 'stable' | 'decreasing'> {
+  private async analyzeTrendDirection(threat: SelectThreat): Promise<TrendDirection> {
     try {
-      // Get historical threats of the same type
       const historicalThreats = await db
         .select()
         .from(threats)
         .where(eq(threats.type, threat.type))
         .orderBy(threats.timestamp);
 
-      if (historicalThreats.length < 2) {
-        return 'stable';
-      }
+      if (historicalThreats.length < 2) return 'stable';
 
-      // Analyze trend using risk scores
       const recentScores = historicalThreats
         .slice(-5)
         .map(t => this.calculateRiskScore(t));
@@ -148,51 +184,6 @@ class ThreatPredictor {
       console.error('Error analyzing trend:', error);
       return 'stable';
     }
-  }
-
-  private calculateRiskScore(threat: SelectThreat): number {
-    let score = 0;
-
-    // Base score from severity
-    if (threat.severity === 'critical') score += 100;
-    else if (threat.severity === 'high') score += 75;
-    else if (threat.severity === 'medium') score += 50;
-    else score += 25;
-
-    // Adjust based on confidence
-    score *= (threat.confidence || 0.5);
-
-    // Additional factors
-    if (threat.indicators) score += Object.keys(threat.indicators).length * 5;
-
-    return Math.min(100, Math.max(0, score));
-  }
-
-  private getSeverityLevel(riskScore: number): 'low' | 'medium' | 'high' | 'critical' {
-    if (riskScore >= 80) return 'critical';
-    if (riskScore >= 60) return 'high';
-    if (riskScore >= 40) return 'medium';
-    return 'low';
-  }
-
-  private calculateProbability(threat: SelectThreat): number {
-    return (threat.confidence || 0.5) * 
-           (threat.severity === 'critical' ? 0.9 : 
-            threat.severity === 'high' ? 0.7 :
-            threat.severity === 'medium' ? 0.5 : 0.3);
-  }
-
-  private extractIndicators(threat: SelectThreat): string[] {
-    const indicators: string[] = [];
-
-    if (threat.indicators) {
-      const threatIndicators = threat.indicators as Record<string, any>;
-      Object.entries(threatIndicators).forEach(([key, value]) => {
-        indicators.push(`${key}: ${value}`);
-      });
-    }
-
-    return indicators;
   }
 }
 
