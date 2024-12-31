@@ -12,6 +12,19 @@ export const users = pgTable("users", {
   status: text("status").default("active").notNull(),
 });
 
+export const riskProfiles = pgTable("risk_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  overallScore: real("overall_score").default(0).notNull(),
+  categories: json("categories").notNull(), // Stores scores for different security categories
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  recommendations: json("recommendations"), // Stores personalized security recommendations
+  historicalScores: json("historical_scores"), // Tracks score changes over time
+  vulnerabilities: json("vulnerabilities"), // Identified security vulnerabilities
+  strengths: json("strengths"), // Identified security strengths
+  nextAssessmentDate: timestamp("next_assessment_date"),
+});
+
 export const threats = pgTable("threats", {
   id: serial("id").primaryKey(),
   type: text("type").notNull(),
@@ -53,6 +66,8 @@ export const insertThreatSchema = createInsertSchema(threats);
 export const selectThreatSchema = createSelectSchema(threats);
 export const insertThreatIntelligenceSchema = createInsertSchema(threatIntelligence);
 export const selectThreatIntelligenceSchema = createSelectSchema(threatIntelligence);
+export const insertRiskProfileSchema = createInsertSchema(riskProfiles);
+export const selectRiskProfileSchema = createSelectSchema(riskProfiles);
 
 // Types
 export type InsertUser = typeof users.$inferInsert;
@@ -61,3 +76,5 @@ export type InsertThreat = typeof threats.$inferInsert;
 export type SelectThreat = typeof threats.$inferSelect;
 export type InsertThreatIntelligence = typeof threatIntelligence.$inferInsert;
 export type SelectThreatIntelligence = typeof threatIntelligence.$inferSelect;
+export type InsertRiskProfile = typeof riskProfiles.$inferInsert;
+export type SelectRiskProfile = typeof riskProfiles.$inferSelect;
