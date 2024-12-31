@@ -27,9 +27,14 @@ class ThreatPredictor {
   private constructor() {
     this.predictionCache = new Map();
     this.lastUpdateTime = 0;
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error('OpenAI API key is missing. AI-powered features will be disabled.');
+      this.openai = null;
+    } else {
+      this.openai = new OpenAI({ apiKey });
+    }
   }
 
   public static getInstance(): ThreatPredictor {
@@ -130,6 +135,9 @@ class ThreatPredictor {
   }
 
   private async getAIInsights(threat: SelectThreat): Promise<string> {
+    if (!this.openai) {
+      return "AI insights unavailable - API key not configured";
+    }
     try {
       const response = await this.openai.chat.completions.create({
         model: "gpt-4",
