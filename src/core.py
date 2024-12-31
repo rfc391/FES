@@ -5,13 +5,19 @@ import logging
 from typing import Dict, Optional
 import requests
 
+# Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 def log_message(message: str, level: str = 'info') -> None:
-    """Log a message at the specified level."""
+    """Log a message at the specified level.
+    
+    Args:
+        message: The message to log
+        level: Logging level (debug, info, warning, error, critical)
+    """
     log_levels = {
         'debug': logging.debug,
         'info': logging.info,
@@ -30,7 +36,18 @@ class FESCore:
         self.api_data: Dict = {}
 
     def fetch_rods_data(self, api_url: str, params: Optional[Dict] = None) -> Dict:
-        """Fetch RODS-compatible data from APIs."""
+        """Fetch RODS-compatible data from APIs.
+        
+        Args:
+            api_url: The API endpoint URL
+            params: Optional query parameters
+            
+        Returns:
+            Dict containing the API response data
+            
+        Raises:
+            Exception: If the API request fails
+        """
         try:
             response = requests.get(api_url, params=params or {})
             response.raise_for_status()
@@ -40,7 +57,15 @@ class FESCore:
             raise Exception(f"Error fetching RODS data: {str(error)}")
 
     def alert_biothreat(self, threat_level: int, location: str) -> None:
-        """Alert authorities about a biothreat."""
+        """Alert authorities about a biothreat.
+        
+        Args:
+            threat_level: Integer indicating threat severity (0-10)
+            location: String describing the threat location
+            
+        Raises:
+            ValueError: If threat_level is not an integer
+        """
         if not isinstance(threat_level, int):
             raise ValueError("Threat level must be an integer")
             

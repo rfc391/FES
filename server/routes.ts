@@ -1,3 +1,4 @@
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocket, WebSocketServer } from "ws";
@@ -8,10 +9,9 @@ import { eq, desc } from "drizzle-orm";
 import { threatPredictor } from "./ml/threatPredictor";
 
 export function registerRoutes(app: Express): Server {
-  // Setup authentication first
   setupAuth(app);
 
-  // Get threat predictions
+  // API Routes
   app.get('/api/threats/predictions', async (req, res) => {
     try {
       const predictions = await threatPredictor.getPredictions();
@@ -22,7 +22,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get latest threats
   app.get('/api/threats', async (req, res) => {
     try {
       const latestThreats = await db
@@ -37,29 +36,37 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // WebSocket Setup
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ server: httpServer, path: "/api/threats" });
 
-  // WebSocket connection handler for real-time threat updates
-  wss.on("connection", (ws) => {
-    console.log("Client connected to threat feed");
-
-    // Send initial threat data
-    db.select()
-      .from(threats)
-      .orderBy(desc(threats.timestamp))
-      .limit(10)
-      .then((initialThreats) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'initial', threats: initialThreats }));
-        }
-      })
-      .catch(console.error);
-
-    ws.on("close", () => {
-      console.log("Client disconnected from threat feed");
-    });
-  });
+  wss.on("connection", handleWebSocketConnection);
 
   return httpServer;
+}
+
+function handleWebSocketConnection(ws: WebSocket): void {
+  console.log("Client connected to threat feed");
+
+  sendInitialThreats(ws);
+
+  ws.on("close", () => {
+    console.log("Client disconnected from threat feed");
+  });
+}
+
+async function sendInitialThreats(ws: WebSocket): Promise<void> {
+  try {
+    const initialThreats = await db
+      .select()
+      .from(threats)
+      .orderBy(desc(threats.timestamp))
+      .limit(10);
+
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'initial', threats: initialThreats }));
+    }
+  } catch (error) {
+    console.error('Error sending initial threats:', error);
+  }
 }
