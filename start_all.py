@@ -1,52 +1,29 @@
 
-import threading
-from src.monitoring import SystemMonitor
-from src.automated_reports import AutomatedReporting
-from src.trello_automation.project_automator import ProjectAutomator
-from src.ml_integration import ModelManager
-from src.visualization import DashboardManager
+import subprocess
 import logging
+import sys
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def main():
-    # Start system monitoring
-    monitor = SystemMonitor()
-    monitor.start()
-
-    # Initialize ML models
-    model_manager = ModelManager()
-
-    # Start dashboard
-    dashboard = DashboardManager()
-    
-    # Start automated reporting
-    reporting = AutomatedReporting({
-        'smtp_server': 'smtp.gmail.com',
-        'port': 587
-    })
-
-    # Start Trello automation
-    automator = ProjectAutomator()
-    
-    # Start all services in separate threads
-    services = [
-        threading.Thread(target=monitor.update_metrics),
-        threading.Thread(target=dashboard.app.run_server, kwargs={'host': '0.0.0.0', 'port': 8050}),
-        threading.Thread(target=reporting.schedule_reports),
-        threading.Thread(target=automator.automate_board, args=('YOUR_BOARD_ID',))
-    ]
-    
-    for service in services:
-        service.daemon = True
-        service.start()
-    
-    # Keep main thread alive
+def start_all_services():
     try:
-        while True:
-            pass
-    except KeyboardInterrupt:
-        logging.info("Shutting down services...")
+        # Run code quality checks
+        logger.info("Running code quality checks...")
+        subprocess.run([sys.executable, "-m", "black", "src/", "tests/"], check=True)
+        subprocess.run([sys.executable, "-m", "flake8", "src/", "tests/"], check=True)
+        
+        # Start automation services
+        logger.info("Starting automation services...")
+        subprocess.Popen([sys.executable, "start_automation.py"])
+        subprocess.Popen([sys.executable, "orchestrate_with_notifications.py"])
+        subprocess.Popen([sys.executable, "src/monitoring.py"])
+        
+        logger.info("All services started successfully")
+    except Exception as e:
+        logger.error(f"Error starting services: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    start_all_services()
