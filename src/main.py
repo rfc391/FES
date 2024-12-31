@@ -127,8 +127,9 @@ def main():
         logging.info("Starting FES platform with configuration: %s", 
                     json.dumps(config, indent=2))
 
-        # Start Flask server
-        app.run(host='0.0.0.0', port=5001, debug=True)
+        # Start Flask server on port 5001 to avoid conflict with Express
+        port = int(os.environ.get('PYTHON_SERVICE_PORT', 5001))
+        app.run(host='0.0.0.0', port=port, debug=True)
 
     except Exception as e:
         logging.error("Failed to start FES platform: %s", str(e))
