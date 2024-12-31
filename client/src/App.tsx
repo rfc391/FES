@@ -4,6 +4,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import AuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/DashboardPage";
 import ThreatIntelligencePage from "./pages/ThreatIntelligencePage";
+import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import { useUser } from "./hooks/use-user";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
     <Switch>
       <Route path="/" component={DashboardPage} />
       <Route path="/intelligence" component={ThreatIntelligencePage} />
+      <Route path="/notifications" component={NotificationSettingsPage} />
       <Route component={NotFound} />
     </Switch>
   );

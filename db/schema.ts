@@ -68,6 +68,22 @@ export const threatIntelligence = pgTable("threat_intelligence", {
   references: json("references"),
 });
 
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  emailEnabled: boolean("email_enabled").default(true),
+  webhookEnabled: boolean("webhook_enabled").default(false),
+  inAppEnabled: boolean("in_app_enabled").default(true),
+  emailAddress: text("email_address"),
+  webhookUrl: text("webhook_url"),
+  minimumSeverity: text("minimum_severity").default("medium"),
+  digestFrequency: text("digest_frequency").default("realtime"), 
+  quietHoursStart: integer("quiet_hours_start"),
+  quietHoursEnd: integer("quiet_hours_end"),
+  customFilters: json("custom_filters"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export const insertThreatSchema = createInsertSchema(threats);
@@ -80,6 +96,8 @@ export const insertRiskFactorSchema = createInsertSchema(riskFactors);
 export const selectRiskFactorSchema = createSelectSchema(riskFactors);
 export const insertThreatIntelligenceSchema = createInsertSchema(threatIntelligence);
 export const selectThreatIntelligenceSchema = createSelectSchema(threatIntelligence);
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences);
+export const selectNotificationPreferencesSchema = createSelectSchema(notificationPreferences);
 
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
@@ -93,3 +111,5 @@ export type InsertRiskFactor = typeof riskFactors.$inferInsert;
 export type SelectRiskFactor = typeof riskFactors.$inferSelect;
 export type InsertThreatIntelligence = typeof threatIntelligence.$inferInsert;
 export type SelectThreatIntelligence = typeof threatIntelligence.$inferSelect;
+export type InsertNotificationPreferences = typeof notificationPreferences.$inferInsert;
+export type SelectNotificationPreferences = typeof notificationPreferences.$inferSelect;
