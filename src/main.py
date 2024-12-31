@@ -7,13 +7,13 @@ import logging
 from typing import Dict, Any
 import json
 from datetime import datetime
-from flask import Flask, jsonify, request
-from .utils import setup_logging, analyze_fluctuations, validate_signal
-from .config import load_config
-from .readme_generator import update_project_readme
-from .automation.test_runner import TestRunner
-from .automation.code_quality import analyze_code_quality
 import os
+from flask import Flask, jsonify, request
+from utils import setup_logging, analyze_fluctuations, validate_signal
+from config import load_config
+from readme_generator import update_project_readme
+from automation.test_runner import TestRunner
+from automation.code_quality import analyze_code_quality
 
 app = Flask(__name__)
 config = load_config()
@@ -83,7 +83,7 @@ def get_metrics() -> Dict[str, Any]:
     Get current project metrics
     """
     try:
-        from .readme_generator import ReadmeGenerator
+        from readme_generator import ReadmeGenerator
         generator = ReadmeGenerator(os.getcwd())
         metrics = generator.gather_project_metrics()
         return jsonify(metrics)
