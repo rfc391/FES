@@ -12,14 +12,20 @@ export const users = pgTable("users", {
 
 export const threats = pgTable("threats", {
   id: serial("id").primaryKey(),
-  type: text("type").notNull(), // e.g., "malware", "intrusion", "ddos"
-  severity: text("severity").notNull(), // "low", "medium", "high", "critical"
+  type: text("type").notNull(),
+  severity: text("severity").notNull(),
   source: text("source").notNull(),
   targetIp: text("target_ip"),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   details: json("details").notNull(),
-  status: text("status").default("active").notNull(), // "active", "resolved", "false_positive"
+  status: text("status").default("active").notNull(),
   resolutionNotes: text("resolution_notes"),
+  isShared: boolean("is_shared").default(false),
+  sharedBy: integer("shared_by").references(() => users.id),
+  organizationName: text("organization_name"),
+  indicators: json("indicators"),
+  mitigation: text("mitigation"),
+  confidence: real("confidence").default(0.5),
 });
 
 export const alerts = pgTable("alerts", {
@@ -29,13 +35,13 @@ export const alerts = pgTable("alerts", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   message: text("message").notNull(),
   acknowledged: boolean("acknowledged").default(false),
-  priority: text("priority").notNull(), // "low", "medium", "high", "critical"
+  priority: text("priority").notNull(),
 });
 
 export const metrics = pgTable("metrics", {
   id: serial("id").primaryKey(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
-  metricType: text("metric_type").notNull(), // "system_health", "network_traffic", "threat_count"
+  metricType: text("metric_type").notNull(),
   value: real("value").notNull(),
   metadata: json("metadata"),
 });
@@ -43,13 +49,25 @@ export const metrics = pgTable("metrics", {
 export const riskFactors = pgTable("risk_factors", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
-  factorType: text("factor_type").notNull(), // "login_pattern", "access_attempt", "location_change"
+  factorType: text("factor_type").notNull(),
   severity: real("severity").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   details: json("details"),
 });
 
-// Export schemas for validation
+export const threatIntelligence = pgTable("threat_intelligence", {
+  id: serial("id").primaryKey(),
+  threatId: integer("threat_id").references(() => threats.id),
+  sharedBy: integer("shared_by").references(() => users.id),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  insights: text("insights").notNull(),
+  tags: json("tags"),
+  relatedThreats: json("related_threats"),
+  confidenceScore: real("confidence_score").default(0.7),
+  verifiedBy: json("verified_by"),
+  references: json("references"),
+});
+
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
 export const insertThreatSchema = createInsertSchema(threats);
@@ -60,8 +78,9 @@ export const insertMetricSchema = createInsertSchema(metrics);
 export const selectMetricSchema = createSelectSchema(metrics);
 export const insertRiskFactorSchema = createInsertSchema(riskFactors);
 export const selectRiskFactorSchema = createSelectSchema(riskFactors);
+export const insertThreatIntelligenceSchema = createInsertSchema(threatIntelligence);
+export const selectThreatIntelligenceSchema = createSelectSchema(threatIntelligence);
 
-// Export types
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
 export type InsertThreat = typeof threats.$inferInsert;
@@ -72,3 +91,5 @@ export type InsertMetric = typeof metrics.$inferInsert;
 export type SelectMetric = typeof metrics.$inferSelect;
 export type InsertRiskFactor = typeof riskFactors.$inferInsert;
 export type SelectRiskFactor = typeof riskFactors.$inferSelect;
+export type InsertThreatIntelligence = typeof threatIntelligence.$inferInsert;
+export type SelectThreatIntelligence = typeof threatIntelligence.$inferSelect;

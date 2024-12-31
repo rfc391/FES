@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Loader2 } from "lucide-react";
 import AuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/DashboardPage";
+import ThreatIntelligencePage from "./pages/ThreatIntelligencePage";
 import { useUser } from "./hooks/use-user";
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
   return (
     <Switch>
       <Route path="/" component={DashboardPage} />
+      <Route path="/intelligence" component={ThreatIntelligencePage} />
       <Route component={NotFound} />
     </Switch>
   );
