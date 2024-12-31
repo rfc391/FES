@@ -159,13 +159,18 @@ export class ThreatIntelligenceService {
     userId: number,
     shareScope?: 'public' | 'private' | 'trusted'
   ): Promise<SelectThreatIntelligence[]> {
-    let query = db.select().from(threatIntelligence);
+    const query = shareScope
+      ? await db
+          .select()
+          .from(threatIntelligence)
+          .where(eq(threatIntelligence.shareScope, shareScope))
+          .orderBy(desc(threatIntelligence.timestamp))
+      : await db
+          .select()
+          .from(threatIntelligence)
+          .orderBy(desc(threatIntelligence.timestamp));
 
-    if (shareScope) {
-      query = query.where(eq(threatIntelligence.shareScope, shareScope));
-    }
-
-    return query.orderBy(desc(threatIntelligence.timestamp));
+    return query;
   }
 }
 

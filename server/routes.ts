@@ -8,9 +8,29 @@ import { eq, desc } from "drizzle-orm";
 import { threatPredictor } from "./ml/threatPredictor";
 import { riskProfileService } from "./services/RiskProfileService";
 import { threatIntelligenceService } from "./services/ThreatIntelligenceService";
+import { parse as cookieParse } from "cookie";
+import session from "express-session";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Get session from request headers for WebSocket
+  const getSessionFromRequest = async (req: any) => {
+    if (!req.headers.cookie) {
+      return null;
+    }
+    const cookies = cookieParse(req.headers.cookie);
+    const sessionId = cookies['connect.sid'];
+    if (!sessionId) {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      app.get('session')(req, {} as any, () => {
+        resolve(req.session);
+      });
+    });
+  };
 
   // Threat Intelligence Routes
   app.post('/api/threat-intelligence/share', async (req, res) => {
@@ -164,21 +184,36 @@ export function registerRoutes(app: Express): Server {
   // WebSocket Setup for Real-time Updates
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ 
-    server: httpServer, 
-    path: "/api/threat-intelligence/ws" 
+    server: httpServer,
+    path: "/api/threat-intelligence/ws",
+    verifyClient: async ({ req }, done) => {
+      try {
+        const session = await getSessionFromRequest(req);
+        if (!session?.passport?.user) {
+          done(false, 401, 'Unauthorized');
+          return;
+        }
+        req.session = session;
+        req.user = { id: session.passport.user };
+        done(true);
+      } catch (error) {
+        console.error('WebSocket authentication error:', error);
+        done(false, 500, 'Internal Server Error');
+      }
+    }
   });
 
   wss.on("connection", (ws: WebSocket, req: any) => {
-    if (!req.user) {
-      ws.close(1008, 'Authentication required');
-      return;
-    }
-
     console.log(`Client connected to threat intelligence feed: ${req.user.id}`);
     threatIntelligenceService.addClient(ws, req.user.id);
 
+    ws.on("error", (error) => {
+      console.error(`WebSocket error for client ${req.user.id}:`, error);
+    });
+
     ws.on("close", () => {
       console.log(`Client disconnected from threat intelligence feed: ${req.user.id}`);
+      ws.terminate();
     });
   });
 
