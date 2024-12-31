@@ -1,3 +1,4 @@
+
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,16 +8,23 @@ import { UserContext } from "./hooks/use-user";
 import App from './App';
 import "./index.css";
 
-const root = document.getElementById("root");
-if (!root) throw new Error("root element not found");
+function initializeApp() {
+    const rootElement = document.getElementById("root");
+    if (!rootElement) {
+        throw new Error("Failed to find root element");
+    }
 
-createRoot(root).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <UserContext.Provider value={null}>
-        <App />
-        <Toaster />
-      </UserContext.Provider>
-    </QueryClientProvider>
-  </StrictMode>,
-);
+    createRoot(rootElement).render(
+        <StrictMode>
+            <QueryClientProvider client={queryClient}>
+                <UserContext.Provider value={null}>
+                    <App />
+                    <Toaster />
+                </UserContext.Provider>
+            </QueryClientProvider>
+        </StrictMode>
+    );
+}
+
+// Start the application
+initializeApp();
