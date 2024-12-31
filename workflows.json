@@ -1,0 +1,126 @@
+
+{
+  "workflows": {
+    "test-build": {
+      "name": "Test & Build",
+      "mode": "sequential",
+      "tasks": [
+        {
+          "name": "Install Dependencies",
+          "type": "packager",
+          "command": "pip install -r requirements.txt"
+        },
+        {
+          "name": "Run Tests",
+          "type": "shell",
+          "command": "python -m pytest tests/"
+        },
+        {
+          "name": "Build Project",
+          "type": "shell",
+          "command": "python setup.py build"
+        }
+      ]
+    },
+    "code-quality": {
+      "name": "Code Quality Check",
+      "mode": "sequential",
+      "tasks": [
+        {
+          "name": "Install Quality Tools",
+          "type": "packager",
+          "command": "pip install flake8 black mypy"
+        },
+        {
+          "name": "Format Code",
+          "type": "shell",
+          "command": "black src/ tests/"
+        },
+        {
+          "name": "Lint Code",
+          "type": "shell",
+          "command": "flake8 src/ tests/"
+        },
+        {
+          "name": "Type Check",
+          "type": "shell",
+          "command": "mypy src/"
+        }
+      ]
+    },
+    "trello-automation": {
+      "name": "Trello Automation",
+      "mode": "parallel",
+      "tasks": [
+        {
+          "name": "Start Trello Manager",
+          "type": "shell",
+          "command": "python src/trello_automation/scheduler.py"
+        },
+        {
+          "name": "Start GUI",
+          "type": "shell",
+          "command": "python src/trello_automation/gui.py"
+        }
+      ]
+    },
+    "monitoring": {
+      "name": "System Monitoring",
+      "mode": "parallel",
+      "tasks": [
+        {
+          "name": "Start Monitoring",
+          "type": "shell",
+          "command": "python src/monitoring.py"
+        },
+        {
+          "name": "Start Notifications",
+          "type": "shell",
+          "command": "python orchestrate_with_notifications.py"
+        }
+      ]
+    },
+    "data-processing": {
+      "name": "Data Processing",
+      "mode": "sequential",
+      "tasks": [
+        {
+          "name": "Process Signals",
+          "type": "shell",
+          "command": "python src/signal_processing.py"
+        },
+        {
+          "name": "Feature Extraction",
+          "type": "shell",
+          "command": "python src/feature_extraction.py"
+        },
+        {
+          "name": "ML Integration",
+          "type": "shell",
+          "command": "python src/ml_integration.py"
+        }
+      ]
+    },
+    "continuous-testing": {
+      "name": "Continuous Testing",
+      "mode": "sequential",
+      "tasks": [
+        {
+          "name": "Unit Tests",
+          "type": "shell",
+          "command": "python -m pytest tests/test_*.py -v"
+        },
+        {
+          "name": "Integration Tests",
+          "type": "shell",
+          "command": "python -m pytest tests/test_integration.py -v"
+        },
+        {
+          "name": "Generate Coverage",
+          "type": "shell",
+          "command": "python -m pytest --cov=src tests/"
+        }
+      ]
+    }
+  }
+}
