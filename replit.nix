@@ -1,6 +1,7 @@
 
 { pkgs }: {
   deps = [
+    pkgs.postgresql
     pkgs.geckodriver
     pkgs.xsimd
     pkgs.glibcLocales
