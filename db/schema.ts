@@ -2,13 +2,15 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, real } from "
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
+// Basic user schema with authentication fields
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").unique().notNull(),
   password: text("password").notNull(),
   riskScore: real("risk_score").default(0).notNull(),
-  lastLogin: timestamp("last_login"),
-  failedAttempts: integer("failed_attempts").default(0),
+  lastLoginAt: timestamp("last_login_at"),
+  failedAttempts: integer("failed_attempts").default(0).notNull(),
+  status: text("status").default("active").notNull(),
 });
 
 export const threats = pgTable("threats", {
@@ -133,7 +135,6 @@ export const socialLikes = pgTable("social_likes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Define table relations
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(socialPosts),
   comments: many(socialComments),
@@ -163,7 +164,6 @@ export const socialConnectionsRelations = relations(socialConnections, ({ one })
   following: one(users, { fields: [socialConnections.followingId], references: [users.id] }),
 }));
 
-// Schema validation with updated createInsertSchema and createSelectSchema usage
 export const insertUserSchema = createInsertSchema(users, {
   password: (schema) => schema.password,
   username: (schema) => schema.username,
@@ -193,7 +193,6 @@ export const selectSocialConnectionSchema = createSelectSchema(socialConnections
 export const insertSocialLikeSchema = createInsertSchema(socialLikes);
 export const selectSocialLikeSchema = createSelectSchema(socialLikes);
 
-// Types
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
 export type InsertThreat = typeof threats.$inferInsert;

@@ -1,6 +1,7 @@
 import { Switch, Route } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import AuthPage from "./pages/AuthPage";
 import DashboardPage from "./pages/DashboardPage";
 import ThreatIntelligencePage from "./pages/ThreatIntelligencePage";
@@ -10,14 +11,26 @@ import ThreatSocialPage from "./pages/ThreatSocialPage";
 import { useUser } from "./hooks/use-user";
 
 function App() {
-  const { user, isLoading } = useUser();
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
+  const { user, isLoading, error } = useUser();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (error) {
+    throw error; // This will be caught by ErrorBoundary
   }
 
   if (!user) {
