@@ -88,6 +88,7 @@ class WorkflowTracker:
         return self.current_state
 
     def generate_visualization_data(self) -> Dict[str, Any]:
+        """Enhanced visualization with metrics and status indicators"""
         """
         Generate data for workflow visualization
         
