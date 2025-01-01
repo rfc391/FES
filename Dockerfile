@@ -1,26 +1,31 @@
 
-# Use an official Python runtime as the base image
-FROM python:3.9-slim
+# Multi-stage Docker build for optimization
 
-# Set the working directory
+# Stage 1: Build stage
+FROM node:16 AS frontend-build
+WORKDIR /app
+COPY client/package.json client/package-lock.json ./
+RUN npm install
+COPY client/ ./
+RUN npm run build
+
+# Stage 2: Runtime stage
+FROM python:3.9-slim AS runtime
 WORKDIR /app
 
-# Copy dependency files first
-COPY requirements.txt /app/requirements.txt
-COPY requirements_trello.txt /app/requirements_trello.txt
+# Copy dependency files
+COPY requirements.txt requirements_trello.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -r requirements_trello.txt
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir -r requirements_trello.txt
+# Copy application files
+COPY . ./
+COPY --from=frontend-build /app/build ./client/build
 
-# Copy the rest of the application code
-COPY . /app
-
-# Expose the application port
+# Expose port and add environment variables
+ENV FLASK_ENV=production
 EXPOSE 5000
 
 # Add a health check
 HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:5000/health || exit 1
 
-# Command to run the application
 CMD ["python", "src/main.py"]
