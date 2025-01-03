@@ -1,59 +1,43 @@
-"""
-FES Analysis Platform - Main Application
-Provides tools for analyzing signals using fluctuation-enhanced sensing techniques.
-"""
-import streamlit as st
-import numpy as np
-from components.sidebar import create_sidebar
-from components.upload import handle_file_upload
-from components.analysis import perform_analysis
-import logging
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+from flask import Flask, jsonify, request
+from flask_marshmallow import Marshmallow
+from marshmallow import Schema, fields, ValidationError
+from src.signal_processing import process_signal
+from src.feature_extraction import extract_features
+from src.ml_integration import predict_threats
 
-def main():
-    """Initialize and run the main application."""
+# Initialize Flask app and Marshmallow for input validation
+app = Flask(__name__)
+ma = Marshmallow(app)
+
+
+# Validation schema for input data
+class SignalSchema(Schema):
+    signal = fields.List(fields.Float(), required=True)
+
+
+signal_schema = SignalSchema()
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_data():
     try:
-        st.set_page_config(
-            page_title="FES Analysis Platform",
-            page_icon="📊",
-            layout="wide",
-            initial_sidebar_state="expanded"
-        )
-
-        st.title("Fluctuation-Enhanced Sensing Analysis Platform")
-
-        # Add description
-        st.markdown("""
-        This platform provides tools for analyzing signals using fluctuation-enhanced sensing techniques.
-        Upload your signal data to begin analysis.
-        """)
-
-        # Create sidebar with parameters
-        params = create_sidebar()
-
-        # Handle file upload
-        time, signal_data = handle_file_upload()
-
-        if time is not None and signal_data is not None:
-            perform_analysis(time, signal_data, params)
-        else:
-            # Show demo data
-            st.info("No data uploaded. Showing demo data...")
-            t = np.linspace(0, 10, 1000)
-            demo_signal = (
-                np.sin(2 * np.pi * 1 * t) + 
-                0.5 * np.sin(2 * np.pi * 2.5 * t) + 
-                0.25 * np.random.randn(len(t))
-            )
-            perform_analysis(t, demo_signal, params)
+        # Validate incoming data
+        data = signal_schema.load(request.get_json())
+        processed_data = process_signal(data['signal'])
+        features = extract_features(processed_data)
+        predictions = predict_threats(features)
+        return jsonify({'predictions': predictions}), 200
+    except ValidationError as ve:
+        return jsonify({'error': 'Invalid input data', 'details': ve.messages}), 400
     except Exception as e:
-        logging.error(f"Application error: {str(e)}")
-        st.error(f"An error occurred: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
-if __name__ == "__main__":
-    main()
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'healthy'}), 200
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
