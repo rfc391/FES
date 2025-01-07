@@ -1,18 +1,23 @@
+# FES
 
-# Trello Project Management Automation
+## Overview
+Provide an overview of the project and its purpose.
 
-## Setup Instructions
+## Features
+- List
+- Of
+- Key
+- Features
 
-1. Add the following secrets in the Replit Secrets tab:
-   - TRELLO_API_KEY
-   - TRELLO_API_TOKEN
-   - EMAIL_USER
-   - EMAIL_PASS
-   - WEBHOOK_URL
+## Usage
+Instructions for usage.
 
-2. Update the board_id in project_automator.py with your Trello board ID
+## Installation
+Steps for installation.
 
-3. Run the automation:
-   ```bash
-   python src/trello_automation/project_automator.py
-   ```
+## Protocol Buffers
+Details on Protobuf usage in the project.
+
+## Contributors
+- Name 1
+- Name 2
