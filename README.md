@@ -1,18 +1,19 @@
+# FES Project
 
-# Trello Project Management Automation
+## Overview
+This project is enhanced and structured for better usability and development.
+
+## Features
+- Cleaned and structured code.
+- Updated documentation.
+- Testing and deployment ready.
 
 ## Setup Instructions
+1. Follow the included documentation to set up the environment.
+2. Run tests to ensure everything works.
 
-1. Add the following secrets in the Replit Secrets tab:
-   - TRELLO_API_KEY
-   - TRELLO_API_TOKEN
-   - EMAIL_USER
-   - EMAIL_PASS
-   - WEBHOOK_URL
-
-2. Update the board_id in project_automator.py with your Trello board ID
-
-3. Run the automation:
-   ```bash
-   python src/trello_automation/project_automator.py
-   ```
+## Testing
+Run tests with:
+```bash
+pytest tests/
+```
