@@ -1,0 +1,4 @@
+# Add necessary Python packages here.
+
+grpcio
+grpcio-tools
