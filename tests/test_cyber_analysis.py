@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from utils.cyber_analysis import CyberWarfareAnalyzer, CyberThreatIndicator
+from core.cyber_analysis import CyberWarfareAnalyzer, CyberThreatIndicator
 
 @pytest.fixture
 def analyzer():
