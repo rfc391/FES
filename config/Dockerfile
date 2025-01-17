@@ -10,7 +10,7 @@ COPY client/ ./
 RUN npm run build
 
 # Stage 2: Runtime stage
-FROM python:3.9-slim AS runtime
+FROM python:3.14.0a1-slim AS runtime
 WORKDIR /app
 
 # Copy dependency files
