@@ -1,14 +1,74 @@
 
-# Training_and_Simulation_System
-This repository is designed as part of a military-grade system. It is self-sufficient, secure, and user-friendly.
-## Features
-- Event-driven architecture with Kafka and RabbitMQ
-- AI and ML integration with OpenCV, ONNX, and NVIDIA Triton
-- Offline support with auto-save and seamless synchronization
-- Advanced security measures: Zero Trust and Quantum-Safe Encryption
-- Fully compliant with ISO 27001, GDPR, and DARPA standards
-## Getting Started
-Follow the steps below to set up and use this system.
-1. Install dependencies using `requirements.txt`.
-2. Run the setup scripts in the `configurations` folder.
-3. Use `README.md` for detailed usage instructions.
+# Training Simulation System
+
+## Overview
+The Training Simulation System has been enhanced to provide advanced AI-powered scenarios, real-time collaboration, geospatial simulations, and secure data handling.
+
+### New Features
+1. **AI-Powered Training Scenarios**
+    - Endpoint: `/analyze_scenario`
+    - Method: `POST`
+    - Description: Analyzes training scenarios for sentiment and insights.
+    - Example Request:
+      ```json
+      {
+          "scenario_description": "Simulate an emergency response to a fire in a densely populated area."
+      }
+      ```
+    - Example Response:
+      ```json
+      {
+          "analysis": [{"label": "POSITIVE", "score": 0.89}]
+      }
+      ```
+
+2. **Real-Time Collaboration**
+    - Enables real-time updates and interactions for collaborative simulations using Flask-SocketIO.
+
+3. **Geospatial Simulations**
+    - Endpoint: `/simulate_geospatial`
+    - Method: `POST`
+    - Description: Triggers geospatial events for training scenarios.
+    - Example Request:
+      ```json
+      {
+          "latitude": 40.7128,
+          "longitude": -74.0060,
+          "event_type": "Evacuation Drill"
+      }
+      ```
+    - Example Response:
+      ```json
+      {
+          "message": "Geospatial simulation triggered successfully",
+          "event": {...}
+      }
+      ```
+
+4. **Secure Data Handling**
+    - Endpoint: `/secure_data`
+    - Method: `POST`
+    - Description: Encrypts sensitive training data for secure storage or transmission.
+    - Example Request:
+      ```json
+      {
+          "data": "Training simulation records"
+      }
+      ```
+    - Example Response:
+      ```json
+      {
+          "encrypted_data": "abc123...",
+          "iv": "456def..."
+      }
+      ```
+
+### Getting Started
+1. Install dependencies from `requirements.txt`:
+    ```bash
+    pip install -r requirements.txt
+    ```
+2. Run the application:
+    ```bash
+    python app.py
+    ```
