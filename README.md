@@ -1,16 +1,24 @@
-# training-simulation-system-main
+# training-simulation-system
 
-## Project Overview
-This is a fully enhanced repository.
+## Overview
+This repository is part of the Apex Security Intelligence systems, managed under **ParaCryptid**.
+It is hosted and maintained on an **Ubuntu server** with automated deployments.
 
-## Setup Instructions
-1. Clone the repository.
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run tests: `pytest`.
+## Installation
+```bash
+git clone https://github.com/ParaCryptid/training-simulation-system.git
+cd training-simulation-system
+chmod +x setup.sh && ./setup.sh
+```
 
-## Features
-- CI/CD pipeline.
-- Unit tests.
-- Optimized dependencies.
+## Usage
+To start the system:
+```bash
+./run.sh
+```
+
 ## Contributing
-Contributions are welcome. Please open a pull request.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+This repository is licensed under the **MIT License**.
