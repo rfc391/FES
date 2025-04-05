@@ -1,24 +1,105 @@
-# training-simulation-system
+# 🛰️ Training Simulation System
 
-## Overview
-This repository is part of the Apex Security Intelligence systems, managed under **ParaCryptid**.
-It is hosted and maintained on an **Ubuntu server** with automated deployments.
+**Author:** ParaCryptid  
+**Version:** 1.0.0  
+**License:** MIT  
+**Status:** Fully Cross-Platform & Production-Ready  
+**Use Case:** Real-time training simulation system for field exercises, scenario drills, and secure offline simulation.
 
-## Installation
+---
+
+## 🚀 Overview
+
+This is a secure, plug-and-play training simulation platform built for cross-platform deployment on:
+- Windows (.exe)
+- Ubuntu/Debian (.deb)
+- Linux portable (.AppImage)
+
+Ideal for:
+- Simulation training
+- Field exercises
+- Operational preparation
+
+---
+
+## ✅ Features
+
+- 🧠 Simulation replay, record, and log view modes
+- 🌐 Flask-based lightweight backend
+- 📦 Cross-platform packaging (.deb, .exe, .AppImage)
+- 🔐 Hardened for safe offline environments
+- 🧰 CLI, TUI fallback, and GUI-ready architecture
+- ⚙️ CI/CD auto-tests, build, and deploy
+
+---
+
+## 📦 Installation
+
+### 🔧 Python (Developer)
 ```bash
-git clone https://github.com/ParaCryptid/training-simulation-system.git
+git clone https://github.com/paracryptid/training-simulation-system.git
 cd training-simulation-system
-chmod +x setup.sh && ./setup.sh
+pip install -r requirements.txt
+python src/main.py
 ```
 
-## Usage
-To start the system:
+### 🐧 Linux (.deb)
 ```bash
-./run.sh
+sudo dpkg -i build/training-simulation-system.deb
 ```
 
-## Contributing
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+### 🪟 Windows (.exe)
+Run `build/training_simulation_system.exe`
 
-## License
-This repository is licensed under the **MIT License**.
+### 🧳 Portable Linux (.AppImage)
+```bash
+chmod +x build/training_simulation_system.AppImage
+./build/training_simulation_system.AppImage
+```
+
+---
+
+## 🛡️ Security
+
+This project is hardened for field usage with:
+- No outbound traffic
+- No telemetry
+- Local-only operations
+- Log sanitization and rotation
+- Self-contained mode
+
+---
+
+## 🧪 Testing & CI/CD
+
+All changes trigger:
+- ✅ Code linting
+- ✅ Unit tests
+- ✅ Build for all OS targets
+- ✅ Release packaging
+
+---
+
+## 👨‍✈️ Operational Modes
+
+- `--simulate` → run a recorded scenario
+- `--replay` → replay saved logs
+- `--logview` → browse operational logs
+
+---
+
+## 📖 Field Guide
+
+For full usage, refer to [`docs/FIELD_GUIDE.md`](docs/FIELD_GUIDE.md)
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! See [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)
+
+---
+
+## 📜 License
+
+MIT License. Safe for civilian, academic, or defense-grade simulation environments.
