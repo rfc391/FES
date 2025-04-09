@@ -1,7 +1,0 @@
-# GPG KEY CHECK START
-if ! gpg --list-secret-keys 3278E72D19F2AED5FAD1088D7F2AF2C785A100DA >/dev/null 2>&1; then
-  echo "[-] Required GPG key not found or invalid."
-  echo "[-] Unlock failed. GPG key missing or invalid."
-  exit 1
-fi
-# GPG KEY CHECK END

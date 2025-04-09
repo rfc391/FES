@@ -1,0 +1,6 @@
+
+site_name: FES Documentation
+nav:
+  - Home: index.md
+theme:
+  name: readthedocs
